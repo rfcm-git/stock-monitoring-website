@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { uid } from "../utils/helpers";
 import { DB } from "../services/storage";
 import { Icon } from "../components/Icons";
 import { fmtCurrency, now } from "../utils/helpers";
 import Modal from "../components/Modal";
+
+import FetchProducts from "../services/get-data";
 
 export default function Inventory() {
   const { products, setProducts, settings, toast } = useApp();
@@ -16,7 +18,6 @@ export default function Inventory() {
   const barcodeRef = useRef(null);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
-  //const cats = [...new Set(DB.get.map(p=>p.category))];
   const cats = DB.get('categories') || [];
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
@@ -24,9 +25,7 @@ export default function Inventory() {
       && (!catFilter || p.category === catFilter);
   });
 
-  //const openAdd = () => { setForm({ name: '', sku: 'SKU-' + uid().slice(0, 4).toUpperCase(), category: 'Electronics', price: '', stock: '', minStock: '10' }); setModal('add'); };
   const openAdd = () => {
-
     setForm({
       name: '',
       sku: 'SKU-' + uid().slice(0, 4).toUpperCase(),
@@ -35,7 +34,6 @@ export default function Inventory() {
       stock: '',
       minStock: '10'
     });
-
     setModal('add');
   };
   const openEdit = p => { setForm({ ...p, price: String(p.price), stock: String(p.stock), minStock: String(p.minStock) }); setModal('edit'); };
@@ -84,6 +82,14 @@ export default function Inventory() {
     setOpen(false);
   };
 
+  const fetch_products = FetchProducts();
+  const [Iproducts, setIProducts] = useState([]);
+
+  useEffect(() => {
+    setIProducts(fetch_products);
+  }, [fetch_products]);
+
+
   return <div>
     <div className="filter-bar">
       <input className="search-input" placeholder="🔍  Search name or SKU…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
@@ -102,7 +108,7 @@ export default function Inventory() {
         <table>
           <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
-            {filtered.length ? filtered.map(p => (
+            {Iproducts.length ? Iproducts.map(p => (
               <tr key={p.id}>
                 <td><div style={{ fontWeight: 500 }}>{p.name}</div></td>
                 <td><code style={{ fontSize: 12, color: 'var(--text3)' }}>{p.sku}</code></td>

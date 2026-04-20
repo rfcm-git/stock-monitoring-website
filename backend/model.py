@@ -1,14 +1,7 @@
 from sqlalchemy import Column, String, Integer, Float
 from backend.db.database import Base
-import uuid
 from datetime import datetime
-
-# helper
-def uid():
-    return str(uuid.uuid4())
-
-def now():
-    return datetime.utcnow().isoformat()
+from backend.utils.helpers import uid, now
 
 # ----------------------------
 # USERS

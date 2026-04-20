@@ -7,7 +7,6 @@ import hashlib
 def hash_pass(p: str):
     return hashlib.sha256(p.encode()).hexdigest()
 
-
 def seed_data(db: Session):
     # prevent duplicate seed
     if db.query(User).first():
