@@ -1,6 +1,6 @@
 export default function Modal({ open, onClose, title, children, footer }) {
   if (!open) return null;
-  return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+  return <div className="modal-overlay">
     <div className="modal">
       <div className="modal-header">
         <h3>{title}</h3>

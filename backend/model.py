@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, Integer, Float
 from backend.db.database import Base
-from datetime import datetime
 from backend.utils.helpers import uid, now
 
 # ----------------------------

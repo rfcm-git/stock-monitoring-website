@@ -43,6 +43,7 @@ export default function SeedData() {
   ].map(p => ({ ...p, id: uid(), createdAt: now() }));
   DB.set('products', prods);
 
+
   // seed some past sales
   const sales = [];
   for (let i = 30; i >= 0; i--) {

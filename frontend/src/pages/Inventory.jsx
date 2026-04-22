@@ -6,10 +6,15 @@ import { Icon } from "../components/Icons";
 import { fmtCurrency, now } from "../utils/helpers";
 import Modal from "../components/Modal";
 
-import FetchProducts from "../services/get-data";
+import { FetchProducts, FetchCategories } from "../services/get-data";
+import DeleteProduct from "../services/delete-data";
+import AddProduct from "../services/add-data";
+import EditProduct from "../services/edit-data";
+
+
 
 export default function Inventory() {
-  const { products, setProducts, settings, toast } = useApp();
+  const { settings, toast } = useApp();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('');
   const [modal, setModal] = useState(null);
@@ -18,7 +23,27 @@ export default function Inventory() {
   const barcodeRef = useRef(null);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const cats = DB.get('categories') || [];
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [productsData, categoriesData] = await Promise.all([
+          FetchProducts(),
+          FetchCategories()
+        ]);
+
+        setProducts(productsData);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error(error);
+        toast('Failed to load data', 'error');
+      }
+    };
+    loadData();
+  }, []);
+  
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
     return (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
@@ -38,32 +63,84 @@ export default function Inventory() {
   };
   const openEdit = p => { setForm({ ...p, price: String(p.price), stock: String(p.stock), minStock: String(p.minStock) }); setModal('edit'); };
 
-  const save = () => {
-    if (!form.name || !form.sku || !form.price || form.stock === '') return toast('Fill all required fields', 'error');
-    const entry = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock), minStock: parseInt(form.minStock || 0) };
-    if (modal === 'add') {
-      if (products.find(p => p.sku === form.sku)) return toast('SKU already exists', 'error');
-      const p = { ...entry, id: uid(), createdAt: now() };
-      const updated = [...products, p]; DB.set('products', updated); setProducts(updated);
-      toast('Product added', 'success');
-    } else {
-      const updated = products.map(p => p.id === form.id ? { ...p, ...entry } : p);
-      DB.set('products', updated); setProducts(updated); toast('Product updated', 'success');
+  const save = async () => {
+    if (!form.name || !form.sku || !form.price || form.stock === '') {
+      return toast('Fill all required fields', 'error');
     }
+
+    const entry = {
+      ...form,
+      price: parseFloat(form.price),
+      stock: parseInt(form.stock),
+      minStock: parseInt(form.minStock || 0)
+    };
+
+    if (modal === 'add') {
+      if (products.find(p => p.sku === form.sku)) {
+        return toast('SKU already exists', 'error');
+      }
+
+      try {
+        await AddProduct(entry);
+        setProducts(prev => [...prev, entry]);
+        toast('Product added', 'success');
+      } catch (e) {
+        toast('Failed to add product', 'error');
+      }
+
+    } else {
+      const original = products.find(p => String(p.id) === String(form.id));
+
+      if (!original) {
+        toast('Original product not found', 'error');
+        return;
+      }
+
+      const updatedFields = {};
+
+      Object.keys(entry).forEach(key => {
+        if (key === 'id') return;
+        if (entry[key] !== original[key]) {
+          updatedFields[key] = entry[key];
+        }
+      });
+
+      if (Object.keys(updatedFields).length === 0) {
+        toast('No changes made', 'info');
+        return;
+      }
+
+      try {
+        await EditProduct(form.id, updatedFields);
+
+        setProducts(prev =>
+          prev.map(p =>
+            p.id === form.id ? { ...p, ...updatedFields } : p
+          )
+        );
+
+        toast('Product updated', 'success');
+      } catch (e) {
+        toast('Failed to update product', 'error');
+      }
+    }
+
     setModal(null);
   };
 
   const del = id => {
     if (!confirm('Delete this product?')) return;
-    const updated = products.filter(p => p.id !== id);
-    DB.set('products', updated); setProducts(updated); toast('Product deleted', 'success');
+    DeleteProduct(id);
+    setProducts(prev => prev.filter(p => p.id !== id));
+    toast('Product deleted', 'success');
   };
 
   const exportCSV = () => {
     const rows = [['Name', 'SKU', 'Category', 'Price', 'Stock', 'Min Stock', 'Status']];
     filtered.forEach(p => rows.push([p.name, p.sku, p.category, p.price, p.stock, p.minStock, p.stock <= p.minStock ? 'Low Stock' : 'OK']));
     const csv = rows.map(r => r.join(',')).join('\n');
-    const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURIComponent(csv); a.download = 'inventory.csv'; a.click();
+    const a = document.createElement('a');
+    a.href = 'data:text/csv,' + encodeURIComponent(csv); a.download = 'inventory.csv'; a.click();
     toast('Exported CSV', 'success');
   };
 
@@ -75,27 +152,12 @@ export default function Inventory() {
     }
   };
 
-  const [open, setOpen] = useState(false);
-
-  const handleSelect = (value) => {
-    set("category")({ target: { value } }); // update form
-    setOpen(false);
-  };
-
-  const fetch_products = FetchProducts();
-  const [Iproducts, setIProducts] = useState([]);
-
-  useEffect(() => {
-    setIProducts(fetch_products);
-  }, [fetch_products]);
-
-
   return <div>
     <div className="filter-bar">
       <input className="search-input" placeholder="🔍  Search name or SKU…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
       <select className="search-input" value={catFilter} onChange={e => setCatFilter(e.target.value)} style={{ minWidth: 150 }}>
         <option value="">All Categories</option>
-        {cats.map(c => <option key={c}>{c}</option>)}
+        {categories.map(c => <option key={c}>{c}</option>)}
       </select>
       <input ref={barcodeRef} className="search-input" placeholder="📦 Scan barcode…" value={barcodeVal}
         onChange={e => setBarcodeVal(e.target.value)} onKeyDown={handleBarcode} style={{ minWidth: 160 }} />
@@ -108,7 +170,7 @@ export default function Inventory() {
         <table>
           <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
-            {Iproducts.length ? Iproducts.map(p => (
+            {products.length ? products.map(p => (
               <tr key={p.id}>
                 <td><div style={{ fontWeight: 500 }}>{p.name}</div></td>
                 <td><code style={{ fontSize: 12, color: 'var(--text3)' }}>{p.sku}</code></td>
@@ -125,7 +187,7 @@ export default function Inventory() {
                 <td>{p.stock === 0 ? <span className="badge badge-red">Out of Stock</span> : p.stock <= p.minStock ? <span className="badge badge-yellow">Low Stock</span> : <span className="badge badge-green">In Stock</span>}</td>
                 <td>
                   <div className="flex gap-2">
-                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}><Icon.Edit width={12} height={12}/></button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}><Icon.Edit width={12} height={12} /></button>
                     <button className="btn btn-danger btn-sm" onClick={() => del(p.id)}><Icon.Trash width={12} height={12} /></button>
                   </div>
                 </td>
@@ -151,7 +213,7 @@ export default function Inventory() {
           <label>Category</label>
           <select className="form-control" value={form.category || ''} onChange={set('category')}>
             <option value="" disabled> Choose category... </option>
-            {cats.map(c => <option key={c} >{c}</option>)}
+            {categories.map(c => <option key={c} >{c}</option>)}
           </select>
         </div>
         <div className="form-group">

@@ -1,15 +1,22 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const FetchProducts = () => {
-  const [data, setData] = useState([]);
-  useEffect(() => {
-    axios
-    .get("http://127.0.0.1:8000/products")
-    .then(response => setData(response.data))
-    .catch(error => console.log(error));
-    }, []);
-    return data;
-  };
+export const FetchProducts = async () => {
+  try {
+    const response = await axios.get("http://127.0.0.1:8000/products");
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+};
 
-export default FetchProducts;
+export const FetchCategories = async () => {
+    try {
+    const response = await axios.get("http://127.0.0.1:8000/categories");
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+};

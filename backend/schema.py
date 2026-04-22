@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
-from backend.utils.helpers import uid
-from sqlalchemy import Column, String, Integer, Float
 from backend.db.database import Base
+from typing import Optional
+
 
 class ProductBase(BaseModel):
     name: str
@@ -22,9 +22,36 @@ class ProductResponse(ProductBase):
         
 # Schema for creating a new product (excludes ID and timestamp)
 class ProductCreate(ProductBase):
-    id: str = uid()
     createdAt: str = datetime.utcnow().isoformat()
     
     class Config:
         from_attributes = True
+        
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
+    minStock: Optional[int] = None
     
+'''class UserBase(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str
+    
+class UserResponse(UserBase):
+    id: str
+    createdAt: str
+
+    class Config:
+        from_attributes = True
+        
+class UserCreate(UserBase):
+    createdAt: str = datetime.utcnow().isoformat()
+    
+    class Config:
+        from_attributes = True
+        
+class UserUpdate(BaseModel):
+    pass'''
