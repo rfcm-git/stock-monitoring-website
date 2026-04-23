@@ -20,3 +20,13 @@ export const FetchCategories = async () => {
     return [];
   }
 };
+
+export const FetchProductsByCategory = async (category) => {
+  try {
+    const response = await axios.get(`http://127.0.0.1:8000/categories/${category}/products`);
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+};

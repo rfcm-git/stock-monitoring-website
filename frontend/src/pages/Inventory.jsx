@@ -6,7 +6,7 @@ import { Icon } from "../components/Icons";
 import { fmtCurrency, now } from "../utils/helpers";
 import Modal from "../components/Modal";
 
-import { FetchProducts, FetchCategories } from "../services/get-data";
+import { FetchProducts, FetchCategories, FetchProductsByCategory } from "../services/get-data";
 import DeleteProduct from "../services/delete-data";
 import AddProduct from "../services/add-data";
 import EditProduct from "../services/edit-data";
@@ -20,6 +20,7 @@ export default function Inventory() {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [barcodeVal, setBarcodeVal] = useState('');
+
   const barcodeRef = useRef(null);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -43,7 +44,7 @@ export default function Inventory() {
     };
     loadData();
   }, []);
-  
+
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
     return (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
@@ -152,11 +153,23 @@ export default function Inventory() {
     }
   };
 
+  const handleCategoryChange = async (e) => {
+    const value = e.target.value;
+    setCatFilter(value);
+
+    const data =
+      value === "All Categories"
+        ? await FetchProducts()
+        : await FetchProductsByCategory(value);
+
+    setProducts(data);
+  };
+  
   return <div>
     <div className="filter-bar">
       <input className="search-input" placeholder="🔍  Search name or SKU…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
-      <select className="search-input" value={catFilter} onChange={e => setCatFilter(e.target.value)} style={{ minWidth: 150 }}>
-        <option value="">All Categories</option>
+      <select className="search-input" value={catFilter} onChange={handleCategoryChange} style={{ minWidth: 150 }} >
+        <option value="All Categories">All Categories</option>
         {categories.map(c => <option key={c}>{c}</option>)}
       </select>
       <input ref={barcodeRef} className="search-input" placeholder="📦 Scan barcode…" value={barcodeVal}
