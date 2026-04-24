@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from backend.db.database import Base, engine, SessionLocal, get_db
 from backend.seed import seed_data
@@ -32,6 +34,8 @@ def get_products(db: Session = Depends(get_db)):
     products = db.query(Product).all()
     return products
 
+
+
 @app.get("/product/{product_id}")
 def get_product(product_id: str, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
@@ -39,7 +43,11 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
 
 @app.post("/product/add")
 def create_product(product_in: ProductCreate, db: Session = Depends(get_db)):
-    product = Product(**product_in.dict())
+    product = Product(
+        **product_in.dict(),
+        createdAt=datetime.utcnow()
+    )
+
     db.add(product)
     db.commit()
     db.refresh(product)
@@ -82,6 +90,16 @@ def get_categories(db: Session = Depends(get_db)):
 def get_products_by_category(category: str, db: Session = Depends(get_db)):
     products = db.query(Product).filter(Product.category == category).all()
     return products
+
+@app.get("/search")
+def search_products(q: str, db: Session = Depends(get_db)):
+    return db.query(Product).filter(
+        or_(
+            Product.name.ilike(f"%{q.strip()}%"),
+            Product.category.ilike(f"%{q.strip()}%"),
+            Product.sku.ilike(f"%{q.strip()}%")
+        )
+    ).all()
 
 '''@app.get("/categories/{category}/products")
 def get_products_by_category(

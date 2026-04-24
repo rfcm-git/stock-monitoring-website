@@ -21,7 +21,7 @@ export const FetchCategories = async () => {
   }
 };
 
-export const FetchProductsByCategory = async (category) => {
+export const FilteredByCategory = async (category) => {
   try {
     const response = await axios.get(`http://127.0.0.1:8000/categories/${category}/products`);
     return response.data;
@@ -29,4 +29,15 @@ export const FetchProductsByCategory = async (category) => {
     console.log(error);
     return [];
   }
+};
+
+export const SearchProducts = async (query) => {
+  try {
+    const response = await axios.get(`http://127.0.0.1:8000/search?q=`, { params: { q: query } });
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+  {console.log(response.data);}
 };

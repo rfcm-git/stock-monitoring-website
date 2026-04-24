@@ -15,17 +15,14 @@ class ProductBase(BaseModel):
 # Schema for reading a product (includes ID and timestamp)
 class ProductResponse(ProductBase):
     id: str
-    createdAt: str
+    createdAt: datetime
 
     class Config:
         from_attributes = True # Allows Pydantic to read SQLAlchemy models
         
 # Schema for creating a new product (excludes ID and timestamp)
 class ProductCreate(ProductBase):
-    createdAt: str = datetime.utcnow().isoformat()
-    
-    class Config:
-        from_attributes = True
+    pass
         
 class ProductUpdate(BaseModel):
     name: Optional[str] = None

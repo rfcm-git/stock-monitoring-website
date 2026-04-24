@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { uid } from "../utils/helpers";
 import { DB } from "../services/storage";
@@ -6,7 +6,7 @@ import { Icon } from "../components/Icons";
 import { fmtCurrency, now } from "../utils/helpers";
 import Modal from "../components/Modal";
 
-import { FetchProducts, FetchCategories, FetchProductsByCategory } from "../services/get-data";
+import { FetchProducts, FetchCategories, FilteredByCategory, SearchProducts } from "../services/get-data";
 import DeleteProduct from "../services/delete-data";
 import AddProduct from "../services/add-data";
 import EditProduct from "../services/edit-data";
@@ -160,14 +160,31 @@ export default function Inventory() {
     const data =
       value === "All Categories"
         ? await FetchProducts()
-        : await FetchProductsByCategory(value);
+        : await FilteredByCategory(value);
 
     setProducts(data);
   };
-  
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(async () => {
+      const data = search
+        ? await SearchProducts(search)
+        : await FetchProducts();
+
+      setCatFilter("All Categories");
+      setProducts(data);
+    }, 300); // delay in ms (adjust as needed)
+
+    return () => clearTimeout(delayDebounce);
+  }, [search]);
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+  };
+
   return <div>
     <div className="filter-bar">
-      <input className="search-input" placeholder="🔍  Search name or SKU…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
+      <input className="search-input" placeholder=" 🔍 Search product name" value={search} onChange={handleSearchChange} style={{ flex: 1, minWidth: 180 }} />
       <select className="search-input" value={catFilter} onChange={handleCategoryChange} style={{ minWidth: 150 }} >
         <option value="All Categories">All Categories</option>
         {categories.map(c => <option key={c}>{c}</option>)}
@@ -220,7 +237,7 @@ export default function Inventory() {
         </div>
         <div className="form-group">
           <label>SKU *</label>
-          <input className="form-control" value={form.sku || ''} onChange={set('sku')} placeholder="SKU-001" />
+          <input className="form-control" value={form.sku || ''} onChange={set('sku')} placeholder="SKU-001" disabled={true} />
         </div>
         <div className="form-group">
           <label>Category</label>
